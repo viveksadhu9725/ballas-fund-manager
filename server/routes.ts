@@ -126,10 +126,5 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  return new Promise<void>((resolve) => {
-    server.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server listening on port ${PORT}`);
-      resolve();
-    });
-  });
+  return server;
 }

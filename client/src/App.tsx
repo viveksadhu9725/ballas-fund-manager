@@ -16,7 +16,7 @@ import Tasks from "@/pages/tasks";
 import Strikes from "@/pages/strikes";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function RouterContent() {
   const { user, appUser, isGuest, loading } = useAuth();
 
   if (loading) {
@@ -64,13 +64,19 @@ function Router() {
   );
 }
 
+function Router() {
+  return (
+    <AuthProvider>
+      <RouterContent />
+    </AuthProvider>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <Router />
-        </AuthProvider>
+        <Router />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
