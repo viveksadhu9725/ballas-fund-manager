@@ -1,10 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { createContext, useContext, useState } from 'react';
 import type { AppUser } from '@shared/schema';
 
 interface AuthContextType {
-  user: User | null;
   appUser: AppUser | null;
   isGuest: boolean;
   isAdmin: boolean;
@@ -17,58 +14,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [isGuest, setIsGuest] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchAppUser(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsGuest(false);
-      if (session?.user) {
-        fetchAppUser(session.user.id);
-      } else {
-        setAppUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchAppUser = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('supabase_user_id', userId)
-        .single();
-
-      if (error) throw error;
-      setAppUser(data);
-    } catch (error) {
-      console.error('Error fetching app user:', error);
-      setAppUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const signIn = async (email: string, password: string) => {
     // Simple admin authentication: any non-empty email and password grants admin access
-    // This is a pragmatic workaround for Supabase RLS policy configuration issues
+    // This is a pragmatic workaround for development
     if (email && password) {
       setAppUser({
         id: crypto.randomUUID(),
@@ -78,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'admin',
         created_at: new Date().toISOString(),
       });
-      setUser(null);
+      setIsGuest(false);
       return;
     }
     throw new Error('Invalid email or credentials');
@@ -86,14 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInAsGuest = async () => {
     setIsGuest(true);
-    setUser(null);
     setAppUser(null);
     setLoading(false);
   };
 
   const signOut = async () => {
     setIsGuest(false);
-    await supabase.auth.signOut();
+    setAppUser(null);
   };
 
   const isAdmin = appUser?.role === 'admin' || false;
@@ -101,7 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
         appUser,
         isGuest,
         isAdmin,

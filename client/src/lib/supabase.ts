@@ -1,16 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-// Create Supabase client for authentication only
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-});
+// This file provides utility functions for backend API calls
+// The app now uses a custom Express backend instead of Supabase
 
 // Proxy function to use backend API instead of direct PostgREST
 export async function dbQuery(table: string, options?: Record<string, any>) {
