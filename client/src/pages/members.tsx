@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -40,21 +39,21 @@ export default function Members() {
   const { data: members, isLoading } = useQuery({
     queryKey: ['/api/members'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Member[];
+      const res = await fetch('/api/members');
+      if (!res.ok) throw new Error('Failed to fetch members');
+      return res.json() as Promise<Member[]>;
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMember) => {
-      const { error } = await supabase
-        .from('members')
-        .insert([data]);
-      if (error) throw error;
+      const res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create member');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/members'] });

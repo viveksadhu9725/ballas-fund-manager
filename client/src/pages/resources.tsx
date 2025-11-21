@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -31,32 +30,30 @@ export default function Resources() {
   const { data: resources, isLoading } = useQuery({
     queryKey: ['/api/resources'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('resources')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data as Resource[];
+      const res = await fetch('/api/resources');
+      if (!res.ok) throw new Error('Failed to fetch resources');
+      return res.json() as Promise<Resource[]>;
     },
   });
 
   const { data: inventory } = useQuery({
     queryKey: ['/api/inventory'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inventory')
-        .select('*');
-      if (error) throw error;
-      return data as Inventory[];
+      const res = await fetch('/api/inventory');
+      if (!res.ok) throw new Error('Failed to fetch inventory');
+      return res.json() as Promise<Inventory[]>;
     },
   });
 
   const createResourceMutation = useMutation({
     mutationFn: async (data: InsertResource) => {
-      const { error } = await supabase
-        .from('resources')
-        .insert([data]);
-      if (error) throw error;
+      const res = await fetch('/api/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create resource');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
@@ -81,16 +78,21 @@ export default function Resources() {
       const existing = inventory?.find(i => i.resource_id === resourceId);
       
       if (existing) {
-        const { error } = await supabase
-          .from('inventory')
-          .update({ quantity, updated_at: new Date().toISOString() })
-          .eq('resource_id', resourceId);
-        if (error) throw error;
+        const res = await fetch('/api/inventory', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: existing.id, quantity })
+        });
+        if (!res.ok) throw new Error('Failed to update inventory');
+        return res.json();
       } else {
-        const { error } = await supabase
-          .from('inventory')
-          .insert([{ resource_id: resourceId, quantity }]);
-        if (error) throw error;
+        const res = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resource_id: resourceId, quantity })
+        });
+        if (!res.ok) throw new Error('Failed to create inventory');
+        return res.json();
       }
     },
     onSuccess: () => {

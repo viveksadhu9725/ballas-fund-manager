@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Package, ClipboardList, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,47 +8,36 @@ export default function Dashboard() {
   const { data: members, isLoading: loadingMembers } = useQuery({
     queryKey: ['/api/members'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Member[];
+      const res = await fetch('/api/members');
+      if (!res.ok) throw new Error('Failed to fetch members');
+      return res.json() as Promise<Member[]>;
     },
   });
 
   const { data: resources, isLoading: loadingResources } = useQuery({
     queryKey: ['/api/resources'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('resources')
-        .select('*');
-      if (error) throw error;
-      return data as Resource[];
+      const res = await fetch('/api/resources');
+      if (!res.ok) throw new Error('Failed to fetch resources');
+      return res.json() as Promise<Resource[]>;
     },
   });
 
   const { data: tasks, isLoading: loadingTasks } = useQuery({
     queryKey: ['/api/tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*');
-      if (error) throw error;
-      return data as Task[];
+      const res = await fetch('/api/tasks');
+      if (!res.ok) throw new Error('Failed to fetch tasks');
+      return res.json() as Promise<Task[]>;
     },
   });
 
   const { data: completions, isLoading: loadingCompletions } = useQuery({
     queryKey: ['/api/task-completions'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_completions')
-        .select('*')
-        .order('noted_at', { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data as TaskCompletion[];
+      const res = await fetch('/api/task-completions');
+      if (!res.ok) throw new Error('Failed to fetch completions');
+      return res.json() as Promise<TaskCompletion[]>;
     },
   });
 

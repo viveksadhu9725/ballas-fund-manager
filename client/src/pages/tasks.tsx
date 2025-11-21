@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -41,43 +40,39 @@ export default function Tasks() {
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['/api/tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Task[];
+      const res = await fetch('/api/tasks');
+      if (!res.ok) throw new Error('Failed to fetch tasks');
+      return res.json() as Promise<Task[]>;
     },
   });
 
   const { data: members } = useQuery({
     queryKey: ['/api/members'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('members')
-        .select('*');
-      if (error) throw error;
-      return data as Member[];
+      const res = await fetch('/api/members');
+      if (!res.ok) throw new Error('Failed to fetch members');
+      return res.json() as Promise<Member[]>;
     },
   });
 
   const { data: resources } = useQuery({
     queryKey: ['/api/resources'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('resources')
-        .select('*');
-      if (error) throw error;
-      return data as Resource[];
+      const res = await fetch('/api/resources');
+      if (!res.ok) throw new Error('Failed to fetch resources');
+      return res.json() as Promise<Resource[]>;
     },
   });
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: InsertTask) => {
-      const { error } = await supabase
-        .from('tasks')
-        .insert([data]);
-      if (error) throw error;
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to create task');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
@@ -99,10 +94,13 @@ export default function Tasks() {
 
   const createCompletionMutation = useMutation({
     mutationFn: async (data: InsertTaskCompletion) => {
-      const { error } = await supabase
-        .from('task_completions')
-        .insert([data]);
-      if (error) throw error;
+      const res = await fetch('/api/task-completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error('Failed to log completion');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/task-completions'] });
