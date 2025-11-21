@@ -10,15 +10,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ShieldAlert, AlertTriangle } from "lucide-react";
+import { Plus, ShieldAlert, AlertTriangle, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Strike, Member, InsertStrike } from "@shared/schema";
 
 export default function Strikes() {
   const { isGuest, isAdmin } = useAuth();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedStrike, setSelectedStrike] = useState<Strike | null>(null);
   const [formData, setFormData] = useState<InsertStrike>({
     member_id: "",
     reason: "",
@@ -60,6 +72,32 @@ export default function Strikes() {
       toast({
         title: "Success",
         description: "Strike issued successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteStrikeMutation = useMutation({
+    mutationFn: async (strikeId: string) => {
+      const res = await fetch(`/api/strikes/${strikeId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Failed to delete strike');
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/strikes'] });
+      setDeleteDialogOpen(false);
+      setSelectedStrike(null);
+      toast({
+        title: "Success",
+        description: "Strike deleted successfully.",
       });
     },
     onError: (error: any) => {
@@ -216,9 +254,25 @@ export default function Strikes() {
                           {getMemberName(strike.member_id)}
                         </span>
                       </div>
-                      <Badge variant="destructive" className="text-xs">
-                        {strike.points} pt{strike.points !== 1 ? 's' : ''}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive" className="text-xs">
+                          {strike.points} pt{strike.points !== 1 ? 's' : ''}
+                        </Badge>
+                        {isAdmin && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setSelectedStrike(strike);
+                              setDeleteDialogOpen(true);
+                            }}
+                            data-testid={`button-delete-strike-${strike.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {strike.reason && (
                       <p className="text-sm text-muted-foreground mb-2">
@@ -318,6 +372,34 @@ export default function Strikes() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="dialog-delete-strike">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Strike</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this strike for {selectedStrike && getMemberName(selectedStrike.member_id)}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedStrike) {
+                  deleteStrikeMutation.mutate(selectedStrike.id);
+                }
+              }}
+              disabled={deleteStrikeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-strike"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
