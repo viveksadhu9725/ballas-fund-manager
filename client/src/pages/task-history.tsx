@@ -63,7 +63,7 @@ export default function TaskHistory() {
       <div>
         <h1 className="font-heading text-4xl font-bold">Task History</h1>
         <p className="text-muted-foreground mt-2">
-          Track member task completion progress and collection amounts
+          View task completion history by member
         </p>
       </div>
 
@@ -74,46 +74,10 @@ export default function TaskHistory() {
           ))}
         </div>
       ) : completionsByMember.length > 0 ? (
-        <>
-          {/* Summary Stats */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Tasks Completed</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {completions?.filter(c => c.completed).length || 0}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Items Collected</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {completions?.reduce((sum, c) => sum + (c.amount_collected || 0), 0) || 0}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Active Members</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {completionsByMember.filter(c => c.completions.length > 0).length}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Member Details */}
-          <div className="space-y-6">
+        <div className="space-y-6">
             {completionsByMember
               .filter(c => c.completions.length > 0)
-              .sort((a, b) => b.totalCollected - a.totalCollected)
+              .sort((a, b) => b.completions.length - a.completions.length)
               .map(({ member, completions: memberCompletions, completedCount, totalCollected }) => (
                 <Card key={member.id} data-testid={`member-history-${member.id}`}>
                   <CardHeader>
@@ -185,7 +149,7 @@ export default function TaskHistory() {
                 </Card>
               ))}
           </div>
-        </>
+        </div>
       ) : (
         <Card>
           <CardContent className="py-12">

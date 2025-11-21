@@ -5,11 +5,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import type { Resource, InsertResource, Inventory } from "@shared/schema";
@@ -19,6 +29,7 @@ export default function Resources() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inventoryDialogOpen, setInventoryDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [formData, setFormData] = useState<InsertResource>({
     name: "",
@@ -102,6 +113,32 @@ export default function Resources() {
       toast({
         title: "Success",
         description: "Inventory updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (resourceId: string) => {
+      const res = await fetch(`/api/resources/${resourceId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Failed to delete resource');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
+      setDeleteDialogOpen(false);
+      setSelectedResource(null);
+      toast({
+        title: "Success",
+        description: "Resource deleted successfully.",
       });
     },
     onError: (error: any) => {
@@ -219,20 +256,33 @@ export default function Resources() {
                   </div>
 
                   {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedResource(resource);
-                        setInventoryQuantity(inv?.quantity || 0);
-                        setInventoryDialogOpen(true);
-                      }}
-                      data-testid={`button-update-inventory-${resource.id}`}
-                      className="w-full"
-                    >
-                      <Pencil className="h-3 w-3 mr-2" />
-                      Update Inventory
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedResource(resource);
+                          setInventoryQuantity(inv?.quantity || 0);
+                          setInventoryDialogOpen(true);
+                        }}
+                        data-testid={`button-update-inventory-${resource.id}`}
+                        className="flex-1"
+                      >
+                        <Pencil className="h-3 w-3 mr-2" />
+                        Update Inventory
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedResource(resource);
+                          setDeleteDialogOpen(true);
+                        }}
+                        data-testid={`button-delete-resource-${resource.id}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -315,6 +365,31 @@ export default function Resources() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="dialog-delete-resource">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Resource</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedResource?.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedResource) {
+                  deleteResourceMutation.mutate(selectedResource.id);
+                }
+              }}
+              data-testid="button-confirm-delete"
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={inventoryDialogOpen} onOpenChange={setInventoryDialogOpen}>
         <DialogContent data-testid="dialog-inventory-form">
