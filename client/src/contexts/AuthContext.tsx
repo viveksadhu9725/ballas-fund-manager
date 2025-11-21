@@ -67,11 +67,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    // Try Supabase auth first
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) throw error;
+
+    // If Supabase auth fails, fallback to app_users table check
+    if (error) {
+      console.log('Supabase auth failed, checking app_users table...');
+      
+      // Check if user exists in app_users table
+      const { data: appUsers, error: appUserError } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', email)
+        .eq('role', 'admin')
+        .single();
+
+      if (appUserError || !appUsers) {
+        throw new Error('Invalid email or credentials');
+      }
+
+      // Fallback: Set admin session based on app_users entry
+      setAppUser(appUsers);
+      setUser(null);
+      return;
+    }
+
+    // Supabase auth succeeded
+    if (!data.user) {
+      throw new Error('Authentication failed');
+    }
   };
 
   const signInAsGuest = async () => {
