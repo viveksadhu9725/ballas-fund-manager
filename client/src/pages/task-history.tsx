@@ -149,7 +149,6 @@ export default function TaskHistory() {
                 </Card>
               ))}
           </div>
-        </div>
       ) : (
         <Card>
           <CardContent className="py-12">
