@@ -134,7 +134,12 @@ export default function Resources() {
   };
 
   const getInventoryForResource = (resourceId: string) => {
-    return inventory?.find(i => i.resource_id === resourceId);
+    // Return only the most recently updated inventory for each resource
+    const resourceInventories = inventory?.filter(i => i.resource_id === resourceId) || [];
+    if (resourceInventories.length === 0) return undefined;
+    return resourceInventories.sort((a, b) => 
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )[0];
   };
 
   return (

@@ -13,6 +13,7 @@ import Dashboard from "@/pages/dashboard";
 import Members from "@/pages/members";
 import Resources from "@/pages/resources";
 import Tasks from "@/pages/tasks";
+import TaskHistory from "@/pages/task-history";
 import Strikes from "@/pages/strikes";
 import NotFound from "@/pages/not-found";
 
@@ -54,6 +55,7 @@ function RouterContent() {
               <Route path="/members" component={Members} />
               <Route path="/resources" component={Resources} />
               <Route path="/tasks" component={Tasks} />
+              <Route path="/task-history" component={TaskHistory} />
               <Route path="/strikes" component={Strikes} />
               <Route component={NotFound} />
             </Switch>

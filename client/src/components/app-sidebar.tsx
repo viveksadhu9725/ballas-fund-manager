@@ -3,6 +3,7 @@ import {
   Users,
   Package,
   ClipboardList,
+  History,
   ShieldAlert,
   LogOut,
 } from "lucide-react";
@@ -42,6 +43,11 @@ const menuItems = [
     title: "Tasks",
     url: "/tasks",
     icon: ClipboardList,
+  },
+  {
+    title: "Task History",
+    url: "/task-history",
+    icon: History,
   },
   {
     title: "Strikes",
