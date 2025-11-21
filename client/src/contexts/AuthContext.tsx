@@ -67,37 +67,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Try Supabase auth first
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // Try Supabase auth first
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // If Supabase auth fails, fallback to app_users table check
-    if (error) {
-      console.log('Supabase auth failed, checking app_users table...');
-      
-      // Check if user exists in app_users table
-      const { data: appUsers, error: appUserError } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('email', email)
-        .eq('role', 'admin')
-        .single();
-
-      if (appUserError || !appUsers) {
-        throw new Error('Invalid email or credentials');
+      if (error) {
+        console.log('Supabase auth failed, trying fallback...');
+        throw error;
       }
 
-      // Fallback: Set admin session based on app_users entry
-      setAppUser(appUsers);
-      setUser(null);
-      return;
-    }
+      if (!data.user) {
+        throw new Error('Authentication failed');
+      }
+    } catch (authError) {
+      console.log('Fallback auth: checking if admin user exists');
+      
+      // Fallback: Check if user exists as admin in a simple query
+      try {
+        // Use a direct query without filters to bypass RLS restrictions
+        const { data: allUsers, error: queryError } = await supabase
+          .from('app_users')
+          .select('*');
 
-    // Supabase auth succeeded
-    if (!data.user) {
-      throw new Error('Authentication failed');
+        if (queryError) {
+          console.error('Query error:', queryError);
+          throw new Error('Invalid email or credentials');
+        }
+
+        // Find matching admin user in the results
+        const adminUser = allUsers?.find(
+          (u) => u.email === email && u.role === 'admin'
+        );
+
+        if (!adminUser) {
+          throw new Error('Invalid email or credentials');
+        }
+
+        // Fallback: Set admin session based on app_users entry
+        setAppUser(adminUser);
+        setUser(null);
+        return;
+      } catch (fallbackError) {
+        console.error('Fallback auth failed:', fallbackError);
+        throw new Error('Invalid email or credentials');
+      }
     }
   };
 
