@@ -130,7 +130,7 @@ export default function Resources() {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error('Failed to delete resource');
-      return res.json();
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/resources'] });
