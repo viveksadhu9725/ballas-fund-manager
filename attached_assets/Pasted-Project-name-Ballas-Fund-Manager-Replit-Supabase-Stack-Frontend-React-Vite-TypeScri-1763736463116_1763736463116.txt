@@ -1,0 +1,113 @@
+Project name: Ballas Fund Manager (Replit + Supabase)
+
+Stack:
+- Frontend: React (Vite) + TypeScript + Tailwind CSS + shadcn/ui (or Headless UI) + react-query (or SWR)
+- Auth + DB + Storage + Realtime: Supabase (Postgres) 
+- Host: Replit (deployable from the Replit project)
+- Optional: Clerk / NextAuth not required — use Supabase Auth.
+
+Design + UX:
+- Theme: Modern, clean, creative. Use Tailwind defaults with a strong accent color (deep purple #5b21b6) + cream/neutral backgrounds.
+- Desktop-first, fully responsive, accessible, simple micro-animations.
+- Use shadcn/ui components (cards, data tables, modals, forms).
+
+Assets:
+- Use the uploaded logo/reference image as the site hero/logo: local path: `/mnt/data/New Project.png`. (Upload to Supabase Storage as `public/logo.png` during setup.)
+
+Auth & Roles:
+- Two login modes on the same login page: **Admin** and **Guest** toggle.
+  - Admin: email/password sign-in. Admin accounts are created in the `users` table with `role = 'admin'`.
+  - Guest: no credentials required for viewing (read-only). Implement guest "view-only" mode using Supabase anon key & RLS policies that only allow SELECT on public views.
+- Provide a seed admin credential for initial setup: `admin@ballas.local` / `ChangeMe123!` (in README instruct to change immediately).
+
+Supabase DB schema (SQL migrations). Create these tables and seed admin user:
+
+```sql
+-- Enable UUID extension (if not already)
+create extension if not exists "uuid-ossp";
+
+-- users (store additional app info)
+create table if not exists app_users (
+  id uuid primary key default uuid_generate_v4(),
+  supabase_user_id uuid, -- link to auth.uid
+  email text unique not null,
+  display_name text,
+  role text not null default 'member', -- 'admin'|'member'
+  created_at timestamptz default now()
+);
+
+-- gang members (members you manage)
+create table if not exists members (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  tag text, -- nickname
+  notes text,
+  added_by uuid references app_users(id),
+  created_at timestamptz default now()
+);
+
+-- resources (types of resources, e.g., autoparts)
+create table if not exists resources (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null unique,
+  description text,
+  unit text default 'pcs', 
+  created_at timestamptz default now()
+);
+
+-- inventory (current counts per resource)
+create table if not exists inventory (
+  id uuid primary key default uuid_generate_v4(),
+  resource_id uuid references resources(id) on delete cascade,
+  quantity integer not null default 0,
+  updated_by uuid references app_users(id),
+  updated_at timestamptz default now()
+);
+
+-- tasks (task definition)
+create table if not exists tasks (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  description text,
+  resource_id uuid references resources(id),
+  required_amount integer default 0, -- e.g., Gather 200 autoparts
+  assigned_member_id uuid references members(id),
+  recurrence text default 'daily', -- daily/once/custom
+  created_by uuid references app_users(id),
+  created_at timestamptz default now()
+);
+
+-- task_completions (daily history)
+create table if not exists task_completions (
+  id uuid primary key default uuid_generate_v4(),
+  task_id uuid references tasks(id) on delete cascade,
+  member_id uuid references members(id),
+  date date not null, -- the day of completion
+  amount_collected integer default 0,
+  completed boolean default false,
+  noted_by uuid references app_users(id),
+  noted_at timestamptz default now()
+);
+
+-- strikes (disciplinary)
+create table if not exists strikes (
+  id uuid primary key default uuid_generate_v4(),
+  member_id uuid references members(id),
+  issued_by uuid references app_users(id),
+  reason text,
+  points integer default 1,
+  created_at timestamptz default now()
+);
+
+-- audit log (optional)
+create table if not exists audit_logs (
+  id uuid primary key default uuid_generate_v4(),
+  actor uuid references app_users(id),
+  action text,
+  meta jsonb,
+  created_at timestamptz default now()
+);
+
+-- Seed: create an initial resource and an admin user record placeholder
+insert into resources (name, description, unit) values ('autoparts', 'Car autoparts for recon', 'pcs') on conflict do nothing;
+-- Note: create supabase auth user in Supabase Auth dashboard, then add row to app_users referencing their supabase_user_id manually.
