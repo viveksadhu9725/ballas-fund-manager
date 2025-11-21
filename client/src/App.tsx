@@ -17,7 +17,7 @@ import Strikes from "@/pages/strikes";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { user, isGuest, loading } = useAuth();
+  const { user, appUser, isGuest, loading } = useAuth();
 
   if (loading) {
     return (
@@ -30,7 +30,7 @@ function Router() {
     );
   }
 
-  if (!user && !isGuest) {
+  if (!user && !appUser && !isGuest) {
     return <Login />;
   }
 
