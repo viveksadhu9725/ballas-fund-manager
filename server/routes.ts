@@ -1,28 +1,28 @@
 import { Express, Request, Response } from "express";
 import { createServer } from "node:http";
-import { Pool } from "@neondatabase/serverless";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// In-memory storage
+const storage = {
+  members: new Map(),
+  resources: new Map(),
+  inventory: new Map(),
+  tasks: new Map(),
+  taskCompletions: new Map(),
+  strikes: new Map(),
+};
+
+function generateId() {
+  return Math.random().toString(36).substr(2, 9);
+}
 
 export async function registerRoutes(app: Express) {
   const server = createServer(app);
 
-  // Helper to query database
-  async function queryDb(text: string, params?: any[]) {
-    const client = await pool.connect();
-    try {
-      const result = await client.query(text, params);
-      return result.rows;
-    } finally {
-      client.release();
-    }
-  }
-
   // GET /api/members
   app.get("/api/members", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM members ORDER BY created_at DESC");
-      res.json(result);
+      const members = Array.from(storage.members.values());
+      res.json(members);
     } catch (error: any) {
       console.error("Error fetching members:", error);
       res.status(500).json({ error: error.message });
@@ -33,11 +33,20 @@ export async function registerRoutes(app: Express) {
   app.post("/api/members", async (req: Request, res: Response) => {
     try {
       const { name, tag, notes } = req.body;
-      const result = await queryDb(
-        "INSERT INTO members (name, tag, notes, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *",
-        [name, tag || null, notes || null]
-      );
-      res.json(result);
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      const id = generateId();
+      const member = {
+        id,
+        name,
+        tag: tag || null,
+        notes: notes || null,
+        added_by: null,
+        created_at: new Date().toISOString()
+      };
+      storage.members.set(id, member);
+      res.json([member]);
     } catch (error: any) {
       console.error("Error creating member:", error);
       res.status(500).json({ error: error.message });
@@ -48,11 +57,16 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/members", async (req: Request, res: Response) => {
     try {
       const { id, name, tag, notes } = req.body;
-      const result = await queryDb(
-        "UPDATE members SET name = $1, tag = $2, notes = $3 WHERE id = $4 RETURNING *",
-        [name, tag || null, notes || null, id]
-      );
-      res.json(result);
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const member = storage.members.get(id);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      const updated = { ...member, name, tag: tag || null, notes: notes || null };
+      storage.members.set(id, updated);
+      res.json([updated]);
     } catch (error: any) {
       console.error("Error updating member:", error);
       res.status(500).json({ error: error.message });
@@ -63,7 +77,7 @@ export async function registerRoutes(app: Express) {
   app.delete("/api/members/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await queryDb("DELETE FROM members WHERE id = $1", [id]);
+      storage.members.delete(id);
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting member:", error);
@@ -74,8 +88,8 @@ export async function registerRoutes(app: Express) {
   // GET /api/resources
   app.get("/api/resources", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM resources ORDER BY name");
-      res.json(result);
+      const resources = Array.from(storage.resources.values());
+      res.json(resources);
     } catch (error: any) {
       console.error("Error fetching resources:", error);
       res.status(500).json({ error: error.message });
@@ -86,11 +100,19 @@ export async function registerRoutes(app: Express) {
   app.post("/api/resources", async (req: Request, res: Response) => {
     try {
       const { name, description, unit } = req.body;
-      const result = await queryDb(
-        "INSERT INTO resources (name, description, unit, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *",
-        [name, description || null, unit || "pcs"]
-      );
-      res.json(result);
+      if (!name) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      const id = generateId();
+      const resource = {
+        id,
+        name,
+        description: description || null,
+        unit: unit || "pcs",
+        created_at: new Date().toISOString()
+      };
+      storage.resources.set(id, resource);
+      res.json([resource]);
     } catch (error: any) {
       console.error("Error creating resource:", error);
       res.status(500).json({ error: error.message });
@@ -101,11 +123,16 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/resources", async (req: Request, res: Response) => {
     try {
       const { id, name, description, unit } = req.body;
-      const result = await queryDb(
-        "UPDATE resources SET name = $1, description = $2, unit = $3 WHERE id = $4 RETURNING *",
-        [name, description || null, unit || "pcs", id]
-      );
-      res.json(result);
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const resource = storage.resources.get(id);
+      if (!resource) {
+        return res.status(404).json({ error: "Resource not found" });
+      }
+      const updated = { ...resource, name, description: description || null, unit: unit || "pcs" };
+      storage.resources.set(id, updated);
+      res.json([updated]);
     } catch (error: any) {
       console.error("Error updating resource:", error);
       res.status(500).json({ error: error.message });
@@ -116,7 +143,7 @@ export async function registerRoutes(app: Express) {
   app.delete("/api/resources/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await queryDb("DELETE FROM resources WHERE id = $1", [id]);
+      storage.resources.delete(id);
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting resource:", error);
@@ -127,8 +154,8 @@ export async function registerRoutes(app: Express) {
   // GET /api/inventory
   app.get("/api/inventory", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM inventory");
-      res.json(result);
+      const inventory = Array.from(storage.inventory.values());
+      res.json(inventory);
     } catch (error: any) {
       console.error("Error fetching inventory:", error);
       res.status(500).json({ error: error.message });
@@ -139,11 +166,18 @@ export async function registerRoutes(app: Express) {
   app.post("/api/inventory", async (req: Request, res: Response) => {
     try {
       const { resource_id, quantity } = req.body;
-      const result = await queryDb(
-        "INSERT INTO inventory (resource_id, quantity, updated_at) VALUES ($1, $2, NOW()) RETURNING *",
-        [resource_id, quantity || 0]
-      );
-      res.json(result);
+      if (!resource_id) {
+        return res.status(400).json({ error: "resource_id is required" });
+      }
+      const id = generateId();
+      const inv = {
+        id,
+        resource_id,
+        quantity: quantity || 0,
+        updated_at: new Date().toISOString()
+      };
+      storage.inventory.set(id, inv);
+      res.json([inv]);
     } catch (error: any) {
       console.error("Error creating inventory:", error);
       res.status(500).json({ error: error.message });
@@ -154,11 +188,16 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/inventory", async (req: Request, res: Response) => {
     try {
       const { id, quantity } = req.body;
-      const result = await queryDb(
-        "UPDATE inventory SET quantity = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-        [quantity, id]
-      );
-      res.json(result);
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const inv = storage.inventory.get(id);
+      if (!inv) {
+        return res.status(404).json({ error: "Inventory not found" });
+      }
+      const updated = { ...inv, quantity, updated_at: new Date().toISOString() };
+      storage.inventory.set(id, updated);
+      res.json([updated]);
     } catch (error: any) {
       console.error("Error updating inventory:", error);
       res.status(500).json({ error: error.message });
@@ -168,8 +207,8 @@ export async function registerRoutes(app: Express) {
   // GET /api/tasks
   app.get("/api/tasks", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM tasks ORDER BY created_at DESC");
-      res.json(result);
+      const tasks = Array.from(storage.tasks.values());
+      res.json(tasks);
     } catch (error: any) {
       console.error("Error fetching tasks:", error);
       res.status(500).json({ error: error.message });
@@ -180,11 +219,22 @@ export async function registerRoutes(app: Express) {
   app.post("/api/tasks", async (req: Request, res: Response) => {
     try {
       const { title, description, resource_id, required_amount, assigned_member_id, recurrence } = req.body;
-      const result = await queryDb(
-        "INSERT INTO tasks (title, description, resource_id, required_amount, assigned_member_id, recurrence, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *",
-        [title, description || null, resource_id || null, required_amount || 0, assigned_member_id || null, recurrence || "daily"]
-      );
-      res.json(result);
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      const id = generateId();
+      const task = {
+        id,
+        title,
+        description: description || null,
+        resource_id: resource_id || null,
+        required_amount: required_amount || 0,
+        assigned_member_id: assigned_member_id || null,
+        recurrence: recurrence || "daily",
+        created_at: new Date().toISOString()
+      };
+      storage.tasks.set(id, task);
+      res.json([task]);
     } catch (error: any) {
       console.error("Error creating task:", error);
       res.status(500).json({ error: error.message });
@@ -195,11 +245,16 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/tasks", async (req: Request, res: Response) => {
     try {
       const { id, title, description, resource_id, required_amount, assigned_member_id, recurrence } = req.body;
-      const result = await queryDb(
-        "UPDATE tasks SET title = $1, description = $2, resource_id = $3, required_amount = $4, assigned_member_id = $5, recurrence = $6 WHERE id = $7 RETURNING *",
-        [title, description || null, resource_id || null, required_amount || 0, assigned_member_id || null, recurrence || "daily", id]
-      );
-      res.json(result);
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const task = storage.tasks.get(id);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      const updated = { ...task, title, description, resource_id, required_amount, assigned_member_id, recurrence };
+      storage.tasks.set(id, updated);
+      res.json([updated]);
     } catch (error: any) {
       console.error("Error updating task:", error);
       res.status(500).json({ error: error.message });
@@ -210,7 +265,7 @@ export async function registerRoutes(app: Express) {
   app.delete("/api/tasks/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await queryDb("DELETE FROM tasks WHERE id = $1", [id]);
+      storage.tasks.delete(id);
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting task:", error);
@@ -221,8 +276,8 @@ export async function registerRoutes(app: Express) {
   // GET /api/task-completions
   app.get("/api/task-completions", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM task_completions ORDER BY noted_at DESC LIMIT 100");
-      res.json(result);
+      const completions = Array.from(storage.taskCompletions.values()).slice(-100);
+      res.json(completions);
     } catch (error: any) {
       console.error("Error fetching task completions:", error);
       res.status(500).json({ error: error.message });
@@ -233,11 +288,21 @@ export async function registerRoutes(app: Express) {
   app.post("/api/task-completions", async (req: Request, res: Response) => {
     try {
       const { task_id, member_id, date, amount_collected, completed } = req.body;
-      const result = await queryDb(
-        "INSERT INTO task_completions (task_id, member_id, date, amount_collected, completed, noted_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *",
-        [task_id, member_id || null, date, amount_collected || 0, completed || false]
-      );
-      res.json(result);
+      if (!task_id) {
+        return res.status(400).json({ error: "task_id is required" });
+      }
+      const id = generateId();
+      const completion = {
+        id,
+        task_id,
+        member_id: member_id || null,
+        date: date || new Date().toISOString().split('T')[0],
+        amount_collected: amount_collected || 0,
+        completed: completed || false,
+        noted_at: new Date().toISOString()
+      };
+      storage.taskCompletions.set(id, completion);
+      res.json([completion]);
     } catch (error: any) {
       console.error("Error creating task completion:", error);
       res.status(500).json({ error: error.message });
@@ -248,11 +313,16 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/task-completions", async (req: Request, res: Response) => {
     try {
       const { id, amount_collected, completed } = req.body;
-      const result = await queryDb(
-        "UPDATE task_completions SET amount_collected = $1, completed = $2, noted_at = NOW() WHERE id = $3 RETURNING *",
-        [amount_collected || 0, completed || false, id]
-      );
-      res.json(result);
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const completion = storage.taskCompletions.get(id);
+      if (!completion) {
+        return res.status(404).json({ error: "Completion not found" });
+      }
+      const updated = { ...completion, amount_collected, completed, noted_at: new Date().toISOString() };
+      storage.taskCompletions.set(id, updated);
+      res.json([updated]);
     } catch (error: any) {
       console.error("Error updating task completion:", error);
       res.status(500).json({ error: error.message });
@@ -263,7 +333,7 @@ export async function registerRoutes(app: Express) {
   app.delete("/api/task-completions/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await queryDb("DELETE FROM task_completions WHERE id = $1", [id]);
+      storage.taskCompletions.delete(id);
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting task completion:", error);
@@ -274,8 +344,8 @@ export async function registerRoutes(app: Express) {
   // GET /api/strikes
   app.get("/api/strikes", async (req: Request, res: Response) => {
     try {
-      const result = await queryDb("SELECT * FROM strikes ORDER BY created_at DESC");
-      res.json(result);
+      const strikes = Array.from(storage.strikes.values());
+      res.json(strikes);
     } catch (error: any) {
       console.error("Error fetching strikes:", error);
       res.status(500).json({ error: error.message });
@@ -286,11 +356,20 @@ export async function registerRoutes(app: Express) {
   app.post("/api/strikes", async (req: Request, res: Response) => {
     try {
       const { member_id, reason, points } = req.body;
-      const result = await queryDb(
-        "INSERT INTO strikes (member_id, reason, points, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *",
-        [member_id, reason || null, points || 1]
-      );
-      res.json(result);
+      if (!member_id) {
+        return res.status(400).json({ error: "member_id is required" });
+      }
+      const id = generateId();
+      const strike = {
+        id,
+        member_id,
+        reason: reason || null,
+        points: points || 1,
+        issued_by: null,
+        created_at: new Date().toISOString()
+      };
+      storage.strikes.set(id, strike);
+      res.json([strike]);
     } catch (error: any) {
       console.error("Error creating strike:", error);
       res.status(500).json({ error: error.message });
@@ -301,7 +380,7 @@ export async function registerRoutes(app: Express) {
   app.delete("/api/strikes/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      await queryDb("DELETE FROM strikes WHERE id = $1", [id]);
+      storage.strikes.delete(id);
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting strike:", error);
