@@ -2,7 +2,7 @@ import { Express, Request, Response } from "express";
 import { createServer } from "node:http";
 import { createHash } from "crypto";
 import { db } from "../db/client";
-import { members, resources, inventory, tasks, taskCompletions, strikes, craftedItems, orders, adminUsers } from "../db/schema";
+import { members, resources, inventory, tasks, taskCompletions, strikes, craftedItems, orders, adminUsers } from "../shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express) {
