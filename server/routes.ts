@@ -1,11 +1,34 @@
 import { Express, Request, Response } from "express";
 import { createServer } from "node:http";
+import { createHash } from "crypto";
 import { db } from "../db/client";
-import { members, resources, inventory, tasks, taskCompletions, strikes, craftedItems, orders } from "../db/schema";
+import { members, resources, inventory, tasks, taskCompletions, strikes, craftedItems, orders, adminUsers } from "../db/schema";
 import { eq, desc } from "drizzle-orm";
 
 export async function registerRoutes(app: Express) {
   const server = createServer(app);
+
+  // AUTH ROUTES
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+
+      const passwordHash = createHash('sha256').update(password).digest('hex');
+      const admin = await db.select().from(adminUsers).where(eq(adminUsers.username, username)).limit(1);
+
+      if (!admin.length || admin[0].password_hash !== passwordHash) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+
+      res.json({ id: admin[0].id, username: admin[0].username });
+    } catch (error: any) {
+      console.error("Error during login:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // MEMBERS ROUTES
   app.get("/api/members", async (req: Request, res: Response) => {

@@ -18,22 +18,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const signIn = async (email: string, password: string) => {
-    // Simple admin authentication: any non-empty email and password grants admin access
-    // This is a pragmatic workaround for development
-    if (email && password) {
+  const signIn = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Invalid username or password');
+      }
+
+      const data = await response.json();
       setAppUser({
-        id: crypto.randomUUID(),
-        supabase_user_id: crypto.randomUUID(),
-        email,
-        display_name: email.split('@')[0],
+        id: data.id,
+        supabase_user_id: data.id,
+        email: username,
+        display_name: username,
         role: 'admin',
         created_at: new Date().toISOString(),
       });
       setIsGuest(false);
-      return;
+    } catch (error: any) {
+      throw error;
     }
-    throw new Error('Invalid email or credentials');
   };
 
   const signInAsGuest = async () => {

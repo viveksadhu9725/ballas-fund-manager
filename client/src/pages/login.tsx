@@ -13,7 +13,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { signIn, signInAsGuest, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"admin" | "guest">("admin");
@@ -23,7 +23,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      await signIn(username, password);
       setLocation("/");
       toast({
         title: "Welcome back!",
@@ -33,7 +33,7 @@ export default function Login() {
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: error.message || "Invalid email or password.",
+        description: error.message || "Invalid username or password.",
       });
     } finally {
       setLoading(false);
@@ -103,15 +103,15 @@ export default function Login() {
               <TabsContent value="admin">
                 <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="username">Username</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="admin@ballas.local"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="username"
+                      type="text"
+                      placeholder="Enter username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                       required
-                      data-testid="input-email"
+                      data-testid="input-username"
                     />
                   </div>
                   <div className="space-y-2">
@@ -135,9 +135,6 @@ export default function Login() {
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign In
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-4">
-                    Default credentials: admin@ballas.local / ChangeMe123!
-                  </p>
                 </form>
               </TabsContent>
 
