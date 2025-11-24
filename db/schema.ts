@@ -83,10 +83,3 @@ export const orders = pgTable("orders", {
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
-
-export const adminUsers = pgTable("admin_users", {
-  id: text("id").primaryKey().default(sql`substr(md5(random()::text), 1, 9)`),
-  username: varchar("username", { length: 255 }).notNull().unique(),
-  password_hash: varchar("password_hash", { length: 255 }).notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});

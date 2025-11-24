@@ -224,3 +224,18 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export interface OrderWithRelations extends Order {
   assigned_member?: Member;
 }
+
+// Admin Users (authentication)
+export interface AdminUser {
+  id: string;
+  username: string;
+  password_hash: string;
+  created_at: string;
+}
+
+export const insertAdminUserSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password_hash: z.string().min(1, "Password hash is required"),
+});
+
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
