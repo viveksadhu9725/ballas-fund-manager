@@ -1,5 +1,8 @@
-import { pgTable, text, integer, timestamp, varchar, boolean, enum as pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, varchar, boolean, pgEnum } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+export const recurrenceEnum = pgEnum("recurrence", ["daily", "once", "custom"]);
+export const orderStatusEnum = pgEnum("order_status", ["pending", "in_progress", "completed"]);
 
 export const members = pgTable("members", {
   id: text("id").primaryKey().default(sql`substr(md5(random()::text), 1, 9)`),
@@ -33,7 +36,7 @@ export const tasks = pgTable("tasks", {
   resource_id: text("resource_id"),
   required_amount: integer("required_amount").default(0),
   assigned_member_id: text("assigned_member_id"),
-  recurrence: pgEnum("recurrence", ["daily", "once", "custom"]).default("daily"),
+  recurrence: recurrenceEnum("recurrence").default("daily"),
   created_by: text("created_by"),
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
@@ -75,7 +78,7 @@ export const orders = pgTable("orders", {
   customer_name: varchar("customer_name", { length: 255 }).notNull(),
   customer_contact: varchar("customer_contact", { length: 255 }),
   notes: text("notes"),
-  status: pgEnum("order_status", ["pending", "in_progress", "completed"]).default("pending"),
+  status: orderStatusEnum("status").default("pending"),
   assigned_member_id: text("assigned_member_id"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
