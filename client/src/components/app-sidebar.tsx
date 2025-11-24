@@ -6,6 +6,7 @@ import {
   History,
   ShieldAlert,
   Hammer,
+  ShoppingCart,
   LogOut,
 } from "lucide-react";
 import {
@@ -59,6 +60,11 @@ const menuItems = [
     title: "Crafting",
     url: "/crafting",
     icon: Hammer,
+  },
+  {
+    title: "Orders",
+    url: "/orders",
+    icon: ShoppingCart,
   },
 ];
 

@@ -192,3 +192,35 @@ export type InsertCraftedItem = z.infer<typeof insertCraftedItemSchema>;
 export interface CraftedItemWithRelations extends CraftedItem {
   crafter?: Member;
 }
+
+// Orders (gang RP orders management)
+export interface Order {
+  id: string;
+  reference_id: string;
+  items: string;
+  quantity: number;
+  customer_name: string;
+  customer_contact: string | null;
+  notes: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  assigned_member_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const insertOrderSchema = z.object({
+  reference_id: z.string().min(1, "Reference ID is required"),
+  items: z.string().min(1, "Items is required"),
+  quantity: z.number().int().min(1, "Quantity must be at least 1"),
+  customer_name: z.string().min(1, "Customer name is required"),
+  customer_contact: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
+  assigned_member_id: z.string().nullable().optional(),
+});
+
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+export interface OrderWithRelations extends Order {
+  assigned_member?: Member;
+}

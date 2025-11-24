@@ -10,6 +10,7 @@ const storage = {
   taskCompletions: new Map(),
   strikes: new Map(),
   craftedItems: new Map(),
+  orders: new Map(),
 };
 
 function generateId() {
@@ -463,6 +464,92 @@ export async function registerRoutes(app: Express) {
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting crafted item:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/orders
+  app.get("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const orders = Array.from(storage.orders.values()).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      res.json(orders);
+    } catch (error: any) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/orders
+  app.post("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const { reference_id, items, quantity, customer_name, customer_contact, notes, status, assigned_member_id } = req.body;
+      if (!reference_id || !items || !quantity || !customer_name) {
+        return res.status(400).json({ error: "Required fields missing" });
+      }
+      const id = generateId();
+      const now = new Date().toISOString();
+      const order = {
+        id,
+        reference_id,
+        items,
+        quantity,
+        customer_name,
+        customer_contact: customer_contact || null,
+        notes: notes || null,
+        status: status || 'pending',
+        assigned_member_id: assigned_member_id || null,
+        created_at: now,
+        updated_at: now
+      };
+      storage.orders.set(id, order);
+      res.json([order]);
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // PATCH /api/orders
+  app.patch("/api/orders", async (req: Request, res: Response) => {
+    try {
+      const { id, reference_id, items, quantity, customer_name, customer_contact, notes, status, assigned_member_id } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const order = storage.orders.get(id);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      const updated = {
+        ...order,
+        reference_id: reference_id || order.reference_id,
+        items: items || order.items,
+        quantity: quantity !== undefined ? quantity : order.quantity,
+        customer_name: customer_name || order.customer_name,
+        customer_contact: customer_contact !== undefined ? customer_contact : order.customer_contact,
+        notes: notes !== undefined ? notes : order.notes,
+        status: status || order.status,
+        assigned_member_id: assigned_member_id !== undefined ? assigned_member_id : order.assigned_member_id,
+        updated_at: new Date().toISOString()
+      };
+      storage.orders.set(id, updated);
+      res.json([updated]);
+    } catch (error: any) {
+      console.error("Error updating order:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // DELETE /api/orders/:id
+  app.delete("/api/orders/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      storage.orders.delete(id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting order:", error);
       res.status(500).json({ error: error.message });
     }
   });
