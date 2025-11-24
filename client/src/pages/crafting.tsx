@@ -166,14 +166,14 @@ export default function Crafting() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Crafted By (Optional)</FormLabel>
-                    <Select value={field.value || ''} onValueChange={(v) => field.onChange(v || null)}>
+                    <Select value={field.value || 'unassigned'} onValueChange={(v) => field.onChange(v === 'unassigned' ? null : v)}>
                       <FormControl>
                         <SelectTrigger data-testid="select-crafter">
                           <SelectValue placeholder="Select member" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Not Assigned</SelectItem>
+                        <SelectItem value="unassigned">Not Assigned</SelectItem>
                         {members.map(m => (
                           <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                         ))}
