@@ -9,6 +9,7 @@ const storage = {
   tasks: new Map(),
   taskCompletions: new Map(),
   strikes: new Map(),
+  craftedItems: new Map(),
 };
 
 function generateId() {
@@ -384,6 +385,84 @@ export async function registerRoutes(app: Express) {
       res.status(204).send();
     } catch (error: any) {
       console.error("Error deleting strike:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/crafted-items
+  app.get("/api/crafted-items", async (req: Request, res: Response) => {
+    try {
+      const items = Array.from(storage.craftedItems.values()).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      res.json(items);
+    } catch (error: any) {
+      console.error("Error fetching crafted items:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/crafted-items
+  app.post("/api/crafted-items", async (req: Request, res: Response) => {
+    try {
+      const { item_name, quantity, crafted_by } = req.body;
+      if (!item_name) {
+        return res.status(400).json({ error: "Item name is required" });
+      }
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ error: "Quantity must be at least 1" });
+      }
+      const id = generateId();
+      const now = new Date().toISOString();
+      const item = {
+        id,
+        item_name,
+        quantity,
+        crafted_by: crafted_by || null,
+        created_at: now,
+        updated_at: now
+      };
+      storage.craftedItems.set(id, item);
+      res.json([item]);
+    } catch (error: any) {
+      console.error("Error creating crafted item:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // PATCH /api/crafted-items
+  app.patch("/api/crafted-items", async (req: Request, res: Response) => {
+    try {
+      const { id, item_name, quantity } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: "ID is required" });
+      }
+      const item = storage.craftedItems.get(id);
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+      const updated = {
+        ...item,
+        item_name: item_name || item.item_name,
+        quantity: quantity !== undefined ? quantity : item.quantity,
+        updated_at: new Date().toISOString()
+      };
+      storage.craftedItems.set(id, updated);
+      res.json([updated]);
+    } catch (error: any) {
+      console.error("Error updating crafted item:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // DELETE /api/crafted-items/:id
+  app.delete("/api/crafted-items/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      storage.craftedItems.delete(id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting crafted item:", error);
       res.status(500).json({ error: error.message });
     }
   });

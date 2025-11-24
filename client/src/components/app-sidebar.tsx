@@ -5,6 +5,7 @@ import {
   ClipboardList,
   History,
   ShieldAlert,
+  Hammer,
   LogOut,
 } from "lucide-react";
 import {
@@ -53,6 +54,11 @@ const menuItems = [
     title: "Strikes",
     url: "/strikes",
     icon: ShieldAlert,
+  },
+  {
+    title: "Crafting",
+    url: "/crafting",
+    icon: Hammer,
   },
 ];
 

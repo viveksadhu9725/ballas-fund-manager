@@ -170,3 +170,25 @@ export interface StrikeWithRelations extends Strike {
   member?: Member;
   issuer?: AppUser;
 }
+
+// Crafted Items (gang operations crafting management)
+export interface CraftedItem {
+  id: string;
+  item_name: string;
+  quantity: number;
+  crafted_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const insertCraftedItemSchema = z.object({
+  item_name: z.string().min(1, "Item name is required"),
+  quantity: z.number().int().min(1, "Quantity must be at least 1"),
+  crafted_by: z.string().nullable().optional(),
+});
+
+export type InsertCraftedItem = z.infer<typeof insertCraftedItemSchema>;
+
+export interface CraftedItemWithRelations extends CraftedItem {
+  crafter?: Member;
+}

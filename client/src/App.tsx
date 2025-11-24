@@ -15,6 +15,7 @@ import Resources from "@/pages/resources";
 import Tasks from "@/pages/tasks";
 import TaskHistory from "@/pages/task-history";
 import Strikes from "@/pages/strikes";
+import Crafting from "@/pages/crafting";
 import NotFound from "@/pages/not-found";
 
 function RouterContent() {
@@ -57,6 +58,7 @@ function RouterContent() {
               <Route path="/tasks" component={Tasks} />
               <Route path="/task-history" component={TaskHistory} />
               <Route path="/strikes" component={Strikes} />
+              <Route path="/crafting" component={Crafting} />
               <Route component={NotFound} />
             </Switch>
           </main>
